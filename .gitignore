@@ -38,3 +38,13 @@ yarn-error.log
 
 # OS
 Thumbs.db
+
+# Mobile App Specific
+mobile-app/caches/
+mobile-app/daemon/
+mobile-app/native/
+mobile-app/wrapper/
+mobile-app/.tmp/
+mobile-app/vendor/
+mobile-app/.gradle/
+
