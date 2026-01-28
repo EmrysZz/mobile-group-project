@@ -1,15 +1,40 @@
-/vendor
-/node_modules
-/public/hot
+# Mobile App
+*.iml
+.gradle
+local.properties
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.dex
+*.class
+*.apk
+*.ap_
+*/build/
+**/build/
+
+# Backend
+/vendor/
+/node_modules/
 /public/storage
+/public/hot
 /storage/*.key
+.env
+.env.backup
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
 npm-debug.log
 yarn-error.log
-/.fleet
-/.idea
-/.vscode
-.env
-.env.backup
+.php-cs-fixer.cache
+
+# IDEs
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
