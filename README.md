@@ -1,145 +1,190 @@
-# Flood Rescue (FR) - Web Server Application
+# FR (FloodRescue) - Mobile Group Project
 
-This is the backend and administrator dashboard for the Flood Rescue Android Application. It manages Shelters, Reports, and News/Announcements.
+A full-stack flood rescue and disaster management system consisting of an Android mobile application and Laravel REST API backend.
 
-## 🚀 For Collaborators: Installation Guide
+## 📁 Project Structure
 
-**Important:** This repository **excludes** the `.env` configuration file and the `vendor/` dependency folder for security and efficiency. You **MUST** run `composer install` and set up your own environment file.
+```
+mobile-group-project/
+├── mobile-app/          # Android mobile application
+└── backend/             # Laravel REST API server
+```
 
-### 1. Prerequisites
-- **Laragon** (recommended).
-- **Composer** (installed globally or via Laragon).
-- **SQLYog** or similar DB tool.
-- **Node.js**.
+## 📱 Mobile App
 
-### 2. Setup
+**Technology Stack:**
+- **Language:** Kotlin
+- **UI:** Jetpack Compose
+- **Architecture:** MVVM with ViewModels
+- **Networking:** Ktor Client
+- **Build Tool:** Gradle
 
-#### A. Download/Clone the Project
-Clone this repository to your local machine (e.g., `C:\laragon\www\FR`).
+**Features:**
+- User authentication (register/login)
+- Real-time news feed
+- Interactive flood maps
+- Shelter location finder
+- Incident reporting
 
-#### B. Install Dependencies
-Open your terminal in the project folder and run:
+### Running the Mobile App
 
 ```bash
+cd mobile-app
+./gradlew build
+# Open in Android Studio and run
+```
+
+**API Configuration:**
+The app connects to `http://10.0.2.2:8000/api/` when running in Android emulator (localhost:8000 on your machine).
+
+## 🌐 Backend API
+
+**Technology Stack:**
+- **Framework:** Laravel 11
+- **Authentication:** Laravel Sanctum
+- **Database:** MySQL
+- **Language:** PHP 8.x
+
+**Features:**
+- RESTful API endpoints
+- User authentication with API tokens
+- News management
+- Shelter location data
+- Incident report handling
+
+### Running the Backend
+
+```bash
+cd backend
+
+# Install dependencies
 composer install
-npm install
+
+# Configure environment
+cp .env.example .env
+php artisan key:generate
+
+# Run migrations
+php artisan migrate
+
+# Start development server
+php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-#### C. Database Setup (SQLYog)
-1.  Open **SQLYog**.
-2.  Connect to your local MySQL server.
-3.  Create a new Database named **`fr`**.
+**Important:** Run the backend on `0.0.0.0:8000` to make it accessible from the Android emulator.
 
-#### D. Verify Environment (.env)
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Generate an application key:
-   ```bash
-   php artisan key:generate
-   ```
-3. Ensure the database settings match your local setup:
+## 🚀 Quick Start (Full Stack)
 
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=fr      <-- Must match your SQLYog DB name
-DB_USERNAME=root    <-- Your SQLYog username
-DB_PASSWORD=        <-- Your SQLYog password (leave blank if none)
-```
-
-**Note:** The `.env` file is ignored by Git to protect your local credentials and secrets.
-
-#### D. Run Migrations
-To create the tables (Shelters, Reports, News, Users) in your new `fr` database:
-
+**Terminal 1** - Backend Server:
 ```bash
-php artisan migrate:fresh --seed
+cd backend
+php artisan serve --host=0.0.0.0 --port=8000
 ```
-*This command will also create a default Admin user.*
 
-
-### 3. Running the Application
-
-You need to run two commands in parallel terminals:
-
-**Terminal 1 (Frontend Assets):**
+**Terminal 2** - Mobile App:
 ```bash
-npm run dev
+cd mobile-app
+# Open in Android Studio
+# Run on emulator or device
 ```
 
-**Terminal 2 (Backend Server):**
-```bash
-php artisan serve
-```
+The mobile app will automatically connect to the backend API.
 
-Access the Admin Panel at: [http://localhost:8000/admin](http://localhost:8000/admin)
-- **Email:** `admin@admin.com`
-- **Password:** `password`
+## 📚 API Documentation
 
+Base URL: `http://localhost:8000/api/`
 
-### 4. API Endpoints (For Mobile App)
-
-The mobile app connects to these endpoints:
+### Authentication Endpoints
 
 | Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/api/reports` | Submit a new incident report |
-| `GET` | `/api/reports` | Get list of all incident reports |
-| `GET` | `/api/news` | Get list of announcements |
-| `GET` | `/api/shelters` | Get list of official shelters |
+|--------|----------|-------------|
+| POST | `/register` | Register new user |
+| POST | `/login` | Login user |
+| POST | `/logout` | Logout (requires auth) |
+| GET | `/profile` | Get user profile (requires auth) |
+| PUT | `/profile` | Update profile (requires auth) |
 
+### Public Endpoints
 
-### 5. Mobile App Setup (Android)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/news` | Get news feed |
+| GET | `/shelters` | Get shelter locations |
+| GET | `/reports` | Get incident reports |
+| POST | `/reports` | Submit new report |
 
-1.  Open the Android project in Android Studio.
-2.  Update `MapViewModel.kt`:
-    *   Set `BASE_URL = "http://10.0.2.2/FR/public/api/"` (for Emulator)
-    *   Set `BASE_URL = "http://<YOUR_LAN_IP>/FR/public/api/"` (for Physical Device)
-3.  Ensure `AndroidManifest.xml` has `android:usesCleartextTraffic="true"` and Internet permissions.
+## 🛠️ Development Workflow
 
+### Mobile App Development
+1. Work in `/mobile-app` directory
+2. Use Android Studio
+3. Test with Android emulator or physical device
 
+### Backend Development
+1. Work in `/backend` directory
+2. Use your preferred PHP IDE (VS Code, PhpStorm)
+3. Run `php artisan serve` for development
 
-### 6. Known Limitations & Future Work
+### Full Stack Testing
+1. Start backend server first
+2. Then run mobile app in emulator
+3. Test API integration end-to-end
 
-*   **Mobile User Authentication**: Currently, the mobile app's "Login" and "Register" screens are **simulated**.
-    *   Mobile users are **NOT** stored in the SQL database or Firebase.
-    *   The app creates a temporary session using the entered name.
-    *   **Future Implementation Needed**: Build API endpoints for user registration/login and implement token-based authentication on the Android client to persist user accounts.
+## 🔧 Technical Details
+
+### Database Schema
+- **users** - User accounts with authentication
+- **news** - News articles and updates
+- **shelters** - Evacuation shelter locations
+- **reports** - Flood incident reports
+- **personal_access_tokens** - API authentication tokens
+
+### Mobile App Architecture
+```
+app/src/main/java/com/example/fr/
+├── model/           # Data models (User, News, etc.)
+├── viewmodel/       # Business logic and state
+├── ui/screens/      # Composable UI screens
+└── util/            # Utilities (TokenManager, etc.)
+```
+
+### Backend Structure
+```
+backend/
+├── app/Http/Controllers/Api/  # API controllers
+├── app/Models/                # Eloquent models
+├── database/migrations/       # Database schema
+├── routes/api.php             # API route definitions
+└── storage/                   # Logs and uploads
+```
+
+## 👥 Team Development
+
+### Branch Strategy (Historical)
+- `mob-app` - Mobile application code
+- `web-server` - Laravel backend code
+- `main` - **Monorepo** (current structure)
+
+### Contributing
+1. Clone this repository
+2. Create feature branch from `main`
+3. Make your changes in `/mobile-app` or `/backend`
+4. Test locally before committing
+5. Push and create pull request
+
+## 📝 Important Notes
+
+> **Authentication Fix Applied:** The backend User model includes `HasApiTokens` trait from Laravel Sanctum, enabling proper API token generation.
+
+> **Environment File:** Remember to configure `/backend/.env` with your database credentials before running migrations.
+
+> **Emulator Network:** Android emulator uses `10.0.2.2` to reach the host machine's `localhost`. The mobile app is pre-configured for this.
+
+## 🎓 Project Information
+
+**Course:** Mobile Group Project  
+**Repository:** https://github.com/EmrysZz/mobile-group-project  
 
 ---
 
-## 🔑 Google OAuth (Gmail) Feature Setup
-
-Use this section if you are working on the **Login with Google** feature or Gmail integration. Each collaborator may need their own API credentials.
-
-1.  **Go to Google Cloud Console**: [https://console.cloud.google.com/](https://console.cloud.google.com/)
-2.  **Create a Project**: Name it "Flood Rescue Dev".
-3.  **Enable APIs**: Enable "Gmail API" or "Google Identity Services" as needed.
-4.  **Create Credentials**:
-    - Go to **APIs & Services > Credentials**.
-    - Click **Create Credentials > OAuth client ID**.
-    - Application Type: **Web application**.
-    - **Authorized Redirect URIs**: `http://localhost:8000/api/auth/google/callback` (or similar).
-5.  **Get Keys**: Copy the **Client ID** and **Client Secret**.
-6.  **Update `.env`**:
-    Add your keys to the `.env` file:
-    ```env
-    GOOGLE_CLIENT_ID=your_client_id_here
-    GOOGLE_CLIENT_SECRET=your_client_secret_here
-    GOOGLE_REDIRECT_URL=http://localhost:8000/api/auth/google/callback
-    ```
-
----
-
-## 🌐 Hosting Guide
-
-To host this application for production usage:
-
-1.  **Shared Hosting / VPS**: Ensure the server supports **PHP 8.2+** and **MySQL**.
-2.  **Upload Files**: Upload the entire project (including `vendor`).
-3.  **Point Domain**: Point your domain/subdomain to the `public/` folder.
-4.  **Database**: Export your local `fr` database from SQLYog and import it to the hosting database. Update `.env` with hosting DB credentials.
-5.  **Symlink**: Run `php artisan storage:link` if needed for image uploads.
+**Built with ❤️ for disaster preparedness and community safety**
