@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Scaling the original logo to fit the 108x108 viewport for launcher icons -->
+    <!-- The original was 100x100, we center it at (4,4) -->
+    
+    <group android:translateX="4" android:translateY="4">
+        <!-- Warning Triangle Path -->
+        <path
+            android:pathData="M50,25 L75,70 H25 Z"
+            android:strokeWidth="5"
+            android:strokeLineJoin="round"
+            android:strokeLineCap="round"
+            android:strokeColor="#FFFFFF" />
+
+        <!-- Exclamation Mark -->
+        <path
+            android:pathData="M50,45 V60"
+            android:strokeWidth="5"
+            android:strokeLineCap="round"
+            android:strokeColor="#FFFFFF" />
+
+        <path
+            android:pathData="M50,68m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0"
+            android:fillColor="#FFFFFF" />
+    </group>
+
+</vector>
