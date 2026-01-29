@@ -5,6 +5,12 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// Suppress HTML output for API routes
+if (str_contains($_SERVER['REQUEST_URI'] ?? '', '/api/')) {
+    ini_set('display_errors', '0');
+    ini_set('html_errors', '0');
+}
+
 // Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;

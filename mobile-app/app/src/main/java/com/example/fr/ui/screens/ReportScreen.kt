@@ -7,20 +7,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.fr.data.api.TokenManager
-import com.example.fr.ui.viewmodel.AuthViewModel
+import com.example.fr.ui.viewmodel.ReportViewModel
 import com.example.fr.util.LocationHelper
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -33,18 +32,23 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
+fun ReportScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = viewModel()
+    viewModel: ReportViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val tokenManager = remember { TokenManager(context) }
     val locationHelper = remember { LocationHelper(context) }
-    val uiState by authViewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
 
+    var userName by remember { mutableStateOf(tokenManager.getUser()?.name ?: "") }
+    var incidentType by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+
     // Location state
-    var currentLocation by remember { mutableStateOf<LatLng?>(null) }
+    var selectedLocation by remember { mutableStateOf<LatLng?>(null) }
     var hasLocationPermission by remember { mutableStateOf(locationHelper.hasLocationPermission()) }
 
     // Search state
@@ -59,6 +63,8 @@ fun HomeScreen(
         position = CameraPosition.fromLatLngZoom(defaultLocation, 12f)
     }
 
+    val incidentTypes = listOf("Flood", "Road Closure", "Rescue Needed", "Power Outage", "Other")
+
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -69,7 +75,7 @@ fun HomeScreen(
                 val location = locationHelper.getCurrentLocation()
                 location?.let {
                     val latLng = LatLng(it.latitude, it.longitude)
-                    currentLocation = latLng
+                    selectedLocation = latLng
                     cameraPositionState.animate(
                         CameraUpdateFactory.newLatLngZoom(latLng, 15f)
                     )
@@ -91,7 +97,7 @@ fun HomeScreen(
                     addresses?.firstOrNull()?.let { address ->
                         val latLng = LatLng(address.latitude, address.longitude)
                         withContext(Dispatchers.Main) {
-                            currentLocation = latLng
+                            selectedLocation = latLng
                             cameraPositionState.animate(
                                 CameraUpdateFactory.newLatLngZoom(latLng, 15f)
                             )
@@ -108,14 +114,13 @@ fun HomeScreen(
         }
     }
 
+    // Get current location on launch
     LaunchedEffect(Unit) {
-        authViewModel.setTokenManager(tokenManager)
-
         if (hasLocationPermission) {
             val location = locationHelper.getCurrentLocation()
             location?.let {
                 val latLng = LatLng(it.latitude, it.longitude)
-                currentLocation = latLng
+                selectedLocation = latLng
                 cameraPositionState.animate(
                     CameraUpdateFactory.newLatLngZoom(latLng, 15f)
                 )
@@ -125,31 +130,25 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(uiState.isLoggedIn) {
-        if (!uiState.isLoggedIn && !tokenManager.isLoggedIn()) {
-            navController.navigate("auth") {
-                popUpTo("home") { inclusive = true }
-            }
+    LaunchedEffect(uiState.submitSuccess) {
+        if (uiState.submitSuccess) {
+            viewModel.clearSubmitSuccess()
+            navController.popBackStack()
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("FloodRescue") },
+                title = { Text("Report Incident") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                actions = {
-                    IconButton(onClick = { navController.navigate("profile") }) {
-                        Icon(Icons.Default.Person, contentDescription = "Profile")
-                    }
-                    IconButton(onClick = {
-                        authViewModel.logout()
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout")
-                    }
-                }
+                )
             )
         }
     ) { padding ->
@@ -157,23 +156,39 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val userName = uiState.user?.name ?: tokenManager.getUser()?.name ?: "User"
+            // Info card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Tap on map or use search to select incident location",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
 
-            Text(
-                text = "Welcome, $userName!",
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(16.dp)
-            )
-
-            // Map showing current location
+            // Map for location selection
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
                     .height(280.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
@@ -187,13 +202,16 @@ fun HomeScreen(
                         uiSettings = MapUiSettings(
                             zoomControlsEnabled = true,
                             myLocationButtonEnabled = false
-                        )
+                        ),
+                        onMapClick = { latLng ->
+                            selectedLocation = latLng
+                        }
                     ) {
-                        currentLocation?.let { location ->
+                        selectedLocation?.let { location ->
                             Marker(
                                 state = MarkerState(position = location),
-                                title = "Your Location",
-                                snippet = "You are here"
+                                title = "Incident Location",
+                                snippet = "Tap elsewhere to change"
                             )
                         }
                     }
@@ -269,7 +287,7 @@ fun HomeScreen(
                                         val location = locationHelper.getCurrentLocation()
                                         location?.let {
                                             val latLng = LatLng(it.latitude, it.longitude)
-                                            currentLocation = latLng
+                                            selectedLocation = latLng
                                             cameraPositionState.animate(
                                                 CameraUpdateFactory.newLatLngZoom(latLng, 15f)
                                             )
@@ -281,7 +299,7 @@ fun HomeScreen(
                             ) {
                                 Icon(
                                     Icons.Default.MyLocation,
-                                    contentDescription = "My location",
+                                    contentDescription = "Use current location",
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -312,192 +330,146 @@ fun HomeScreen(
                 }
             }
 
-            currentLocation?.let { location ->
-                Text(
-                    text = "Location: ${String.format("%.4f", location.latitude)}, ${String.format("%.4f", location.longitude)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Navigation cards
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                DashboardCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Home,
-                    title = "Shelters",
-                    description = "Find safe places",
-                    onClick = { navController.navigate("map") }
-                )
-                DashboardCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.ReportProblem,
-                    title = "Report",
-                    description = "Submit incident",
-                    onClick = { navController.navigate("report") }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                DashboardCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.AutoMirrored.Filled.List,
-                    title = "Reports",
-                    description = "View all reports",
-                    onClick = { navController.navigate("reports") }
-                )
-                DashboardCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Add,
-                    title = "Add Shelter",
-                    description = "Register shelter",
-                    onClick = { navController.navigate("addShelter") }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Profile card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                onClick = { navController.navigate("profile") },
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+            // Show selected coordinates
+            selectedLocation?.let { location ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "My Profile",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = "View and edit your profile",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                        )
-                    }
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Emergency tips
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
                 ) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Selected Location",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Text(
+                                    text = "${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                        }
                         Icon(
-                            Icons.Default.Info,
+                            Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Emergency Tips",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "1. Move to higher ground immediately\n" +
-                                "2. Avoid walking in flood water\n" +
-                                "3. Stay away from power lines\n" +
-                                "4. Call emergency services if trapped",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
+            // Form fields
+            OutlinedTextField(
+                value = userName,
+                onValueChange = { userName = it },
+                label = { Text("Your Name") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                enabled = !uiState.isLoading
+            )
 
-@Composable
-fun DashboardCard(
-    modifier: Modifier = Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    description: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = modifier,
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
+            ) {
+                OutlinedTextField(
+                    value = incidentType,
+                    onValueChange = { },
+                    label = { Text("Incident Type") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    leadingIcon = { Icon(Icons.Default.Warning, contentDescription = null) },
+                    enabled = !uiState.isLoading
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    incidentTypes.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type) },
+                            onClick = {
+                                incidentType = type
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                maxLines = 5,
+                leadingIcon = { Icon(Icons.Default.Description, contentDescription = null) },
+                enabled = !uiState.isLoading
             )
+
+            uiState.error?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            Button(
+                onClick = {
+                    viewModel.clearError()
+                    selectedLocation?.let { location ->
+                        viewModel.submitReport(
+                            userName = userName,
+                            incidentType = incidentType,
+                            description = description,
+                            latitude = location.latitude,
+                            longitude = location.longitude
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                enabled = !uiState.isLoading && userName.isNotBlank() &&
+                        incidentType.isNotBlank() && description.isNotBlank() &&
+                        selectedLocation != null
+            ) {
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Submit Report")
+                }
+            }
         }
     }
 }
